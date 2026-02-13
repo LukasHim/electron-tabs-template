@@ -1,14 +1,8 @@
 /** @type {import('next').NextConfig} */
 module.exports = {
   output: 'export',
-  distDir: process.env.NODE_ENV === 'production' ? '../build/app' : '.next',
   trailingSlash: true,
-  images: {
-    unoptimized: true,
-  },
-  webpack: config => {
-    return config;
-  },
+  distDir: process.env.NODE_ENV === 'production' ? '../build/app' : '.next',
   turbopack: {},
   reactCompiler: true,
 };

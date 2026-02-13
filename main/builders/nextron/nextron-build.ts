@@ -2,7 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import arg from 'arg';
 import chalk from 'chalk';
-import execa from 'execa';
+import { execa, Options as execaOptionsType } from 'execa';
 import * as logger from './logger';
 import { getNextronConfig } from './configs/getNextronConfig';
 import { useExportCommand } from './configs/useExportCommand';
@@ -24,17 +24,13 @@ const args = arg({
 const cwd = process.cwd();
 const appDir = path.join(cwd, 'build/app');
 const distDir = path.join(cwd, 'build/dist');
-const rendererSrcDir = getNextronConfig().rendererSrcDir || 'renderer';
-const execaOptions: execa.Options = {
+const execaOptions: execaOptionsType = {
   cwd,
   stdio: 'inherit',
-  env: {
-    ...process.env,
-    NODE_ENV: 'production',
-  },
 };
 
 (async () => {
+  const rendererSrcDir = (await getNextronConfig()).rendererSrcDir || 'renderer';
   // Ignore missing dependencies
   process.env.ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES = 'true';
 
@@ -49,8 +45,7 @@ const execaOptions: execa.Options = {
     }
 
     logger.info('Building main process');
-    // await execa('node', [path.join(__dirname, 'webpack.config.js')], execaOptions);
-    await execa('ts-node', [path.join(__dirname, 'configs/webpack.config.production.ts')], execaOptions);
+    await execa('node', [path.join(__dirname, 'configs/webpack.config.production.js')], execaOptions);
 
     if (args['--no-pack']) {
       logger.info('Skip packaging...');

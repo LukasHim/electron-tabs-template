@@ -1,9 +1,9 @@
 import arg from 'arg';
-import execa from 'execa';
+import { execa, Options as execaOptionsType } from 'execa';
 import webpack from 'webpack';
 import * as logger from './logger';
 import { getNextronConfig } from './configs/getNextronConfig';
-import { config } from './configs/webpack.config.development';
+import { getConfig } from './configs/webpack.config.development';
 import { waitForPort } from 'get-port-please';
 import type { ChildProcess } from 'child_process';
 
@@ -26,23 +26,19 @@ if (args['--port']) {
 
 if (args['--remote-debugging-port']) {
   logger.error(
-    `The option \`--remote-debugging-port\` has been removed. Please use \`--electron-options="--remote-debugging-port=${args['--remote-debugging-port']}"\` instead.`
+    `The option \`--remote-debugging-port\` has been removed. Please use \`--electron-options="--remote-debugging-port=${args['--remote-debugging-port']}"\` instead.`,
   );
   process.exit(1);
 }
 
 if (args['--inspect']) {
   logger.error(
-    `The option \`--inspect\` has been removed. Please use \`--electron-options="--inspect=${args['--inspect']}"\` instead.`
+    `The option \`--inspect\` has been removed. Please use \`--electron-options="--inspect=${args['--inspect']}"\` instead.`,
   );
   process.exit(1);
 }
 
-const nextronConfig = getNextronConfig();
-
 const rendererPort = args['--renderer-port'] || 8888;
-const startupDelay = nextronConfig.startupDelay || args['--startup-delay'] || 10_000;
-
 let electronOptions = args['--electron-options'] || '';
 if (!electronOptions.includes('--remote-debugging-port')) {
   electronOptions += ' --remote-debugging-port=5858';
@@ -52,12 +48,15 @@ if (!electronOptions.includes('--inspect')) {
 }
 electronOptions = electronOptions.trim();
 
-const execaOptions: execa.Options = {
+const execaOptions: execaOptionsType = {
   cwd: process.cwd(),
   stdio: 'inherit',
 };
 
 (async () => {
+  const nextronConfig = await getNextronConfig();
+  const startupDelay = nextronConfig.startupDelay || args['--startup-delay'] || 10_000;
+
   let firstCompile = true;
   let watching: webpack.Watching;
   let mainProcess: ChildProcess;
@@ -74,7 +73,11 @@ const execaOptions: execa.Options = {
 
   const startRendererProcess = () => {
     logger.info(`Run renderer process: next -p ${rendererPort} ${nextronConfig.rendererSrcDir || 'renderer'}`);
-    const child = execa('next', ['-p', rendererPort, nextronConfig.rendererSrcDir || 'renderer'], execaOptions);
+    const child = execa(
+      'next',
+      ['-p', rendererPort.toString(), nextronConfig.rendererSrcDir || 'renderer'],
+      execaOptions,
+    );
     child.on('close', () => {
       process.exit(0);
     });
@@ -108,6 +111,8 @@ const execaOptions: execa.Options = {
     killWholeProcess();
     process.exit(1);
   });
+
+  const config = await getConfig();
 
   // wait until main process is ready
   await new Promise<void>(resolve => {
